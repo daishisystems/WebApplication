@@ -1,4 +1,5 @@
-﻿using System.Web.Http;
+﻿using System.Configuration;
+using System.Web.Http;
 using Owin;
 
 namespace WebService
@@ -16,22 +17,14 @@ namespace WebService
 
             appBuilder.UseWebApi(config);
 
-            MySingleton.Instance.IsLoaded = true;
+            // Connect to the Event Hub
+
+            var eventHubConnectionString =
+                ConfigurationManager.AppSettings["Microsoft.ServiceBus.ConnectionString"];
+            var eventHubName =
+                ConfigurationManager.AppSettings["EventHubName"];
+
+            EventHubManager.Instance.Connect(eventHubConnectionString, eventHubName);
         }
-    }
-
-    public sealed class MySingleton
-    {
-        static MySingleton()
-        {
-        }
-
-        private MySingleton()
-        {
-        }
-
-        public static MySingleton Instance { get; } = new MySingleton();
-
-        public bool IsLoaded { get; set; }
     }
 }
