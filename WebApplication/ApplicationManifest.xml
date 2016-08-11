@@ -9,7 +9,7 @@
   </ServiceManifestImport>
   <DefaultServices>
     <Service Name="WebService">
-      <StatelessService ServiceTypeName="WebServiceType" InstanceCount="-1">
+      <StatelessService ServiceTypeName="WebServiceType">
         <SingletonPartition />
       </StatelessService>
     </Service>
