@@ -15,15 +15,31 @@ namespace WebService.Controllers
 {
     public class ShieldEventController : ApiController
     {
-        public async Task<HttpResponseMessage> Post([FromBody] string events)
+        public async Task<HttpResponseMessage> Post([FromBody] string postBody)
         {
             try
             {
+                if (string.IsNullOrEmpty(postBody))
+                {
+                    throw new ArgumentNullException(nameof(postBody), "Empty POST Body.");
+                }
+
                 IEnumerable<ShieldEvent> shieldEvents;
-                using (var shieldEventsReader = new StringReader(events))
+                using (var shieldEventsReader = new StringReader(postBody))
                 {
                     shieldEvents = JSON.Deserialize<IEnumerable<ShieldEvent>>(shieldEventsReader);
                 }
+
+                var numEventHubPartitions =
+                    int.Parse(ConfigurationManager.AppSettings["NumEventHubPartitions"]);
+
+                // 1. Loop through dictionary and extract single instances
+                // 2. Pump Single instances using 'fake' partition (GUID)
+                // 3. Need to split 32 Partitions among X stateless instances
+                // 4. Pump multiple IPs as batch with Partition Key = IP Address
+
+                // May need to split into groups -> single instance IP, multiple instance IP
+                // Divide multiple instance IPs into groups - max 32
 
                 var eventDataBatch = new List<EventData>();
 
@@ -65,6 +81,19 @@ namespace WebService.Controllers
             }
             catch (Exception exception)
             {
+                if (!NewRelicInsightsClient.Instance.HasStarted)
+                {
+                    NewRelicInsightsClient.Instance.NewRelicInsightsMetadata.AccountID =
+                        ConfigurationManager.AppSettings["NewRelicInsightsAccountID"];
+                    NewRelicInsightsClient.Instance.NewRelicInsightsMetadata.APIKey =
+                        ConfigurationManager.AppSettings["NewRelicInsightsAPIKey"];
+                    NewRelicInsightsClient.Instance.NewRelicInsightsMetadata.URI =
+                        new Uri("https://insights-collector.newrelic.com/v1/accounts");
+                    NewRelicInsightsClient.Instance.CacheUploadLimit = int.MaxValue;
+
+                    NewRelicInsightsClient.Instance.Initialise();
+                }
+
                 NewRelicInsightsClient.Instance.AddNewRelicInsightEvent(new EventHubUploadFailedNewRelicInsightsEvent
                 {
                     ErrorMessage = exception.Message,
